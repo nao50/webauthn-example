@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>WebAuthn Example</title>
+    <!-- <link rel="stylesheet" href="./css/bundle.css" /> -->
+  </head>
+
+  <body translate="no">
+    <div class="login-page">
+      <div class="form">
+        <input
+          type="text"
+          placeholder="username"
+          placeholder="i.e. foo@bar.com"
+          id="email"
+        />
+        <button onclick="registerAsync()">Register</button>
+        <button onclick="authenticationAsync()">Login</button>
+      </div>
+    </div>
+
+    <script>
+      /*----------------------------------------------------
+       * Registration
+       *--------------------------------------------------*/
+      async function registerAsync() {
+        if (!window.PublicKeyCredential) {
+          alert("未対応のブラウザです");
+          return;
+        }
+        try {
+          const optionsRes = await postAttestationOptions();
+          const optionsJSON = await optionsRes.json();
+          // console.log("optionsJSON: ", optionsJSON);
+          const credential = await createCredential(optionsJSON);
+          // console.log("credential: ", credential);
+          const response = await registerResult(credential);
+          // console.log("Registration response: ", response);
+          if (response.ok) {
+            alert("Registration OK!");
+          }
+        } catch (error) {
+          alert(error);
+        }
+      }
+
+      function postAttestationOptions() {
+        const email = document.getElementById("email").value;
+        if (email === "") {
+          alert("Please enter a email");
+          return;
+        }
+        const url = "/register/begin/" + email;
+        return fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      function createCredential(options) {
+        options.publicKey.challenge = stringToArrayBuffer(
+          options.publicKey.challenge
+        );
+        options.publicKey.user.id = stringToArrayBuffer(
+          options.publicKey.user.id
+        );
+        if (options.publicKey.excludeCredentials) {
+          options.publicKey.excludeCredentials.map((credential) =>
+            Object.assign({}, credential, {
+              id: stringToArrayBuffer(credential.id),
+            })
+          );
+        }
+        options.publicKey.authenticatorSelection.userVerification = "preferred";
+        return navigator.credentials.create({
+          publicKey: options.publicKey,
+        });
+      }
+
+      function registerResult(credential) {
+        const email = document.getElementById("email").value;
+        if (email === "") {
+          alert("Please enter a email");
+          return;
+        }
+        const url = "/register/result/" + email;
+
+        let attestationObject = credential.response.attestationObject;
+        let clientDataJSON = credential.response.clientDataJSON;
+        let rawId = credential.rawId;
+
+        return fetch(url, {
+          method: "POST",
+          body: JSON.stringify({
+            id: credential.id,
+            rawId: arrayBufferToBase64(rawId),
+            type: credential.type,
+            response: {
+              attestationObject: arrayBufferToBase64(attestationObject),
+              clientDataJSON: arrayBufferToBase64(clientDataJSON),
+            },
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      /*----------------------------------------------------
+       * Authentication
+       *--------------------------------------------------*/
+      async function authenticationAsync() {
+        if (!window.PublicKeyCredential) {
+          alert("未対応のブラウザです");
+          return;
+        }
+
+        try {
+          const optionsRes = await postAssertionOptions();
+          const optionsJSON = await optionsRes.json();
+          const assertion = await getAssertion(optionsJSON);
+          const response = await authenticationFinish(assertion);
+          console.log("Authentication response: ", response);
+          signedIn(response);
+        } catch (error) {
+          alert(error);
+        }
+      }
+
+      function postAssertionOptions() {
+        const email = document.getElementById("email").value;
+        if (email === "") {
+          alert("Please enter a email");
+          return;
+        }
+        const url = "/login/begin/" + email;
+
+        return fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      function getAssertion(options) {
+        options.publicKey.challenge = stringToArrayBuffer(
+          options.publicKey.challenge
+        );
+        options.publicKey.allowCredentials =
+          options.publicKey.allowCredentials.map((credential) =>
+            Object.assign({}, credential, {
+              id: stringToArrayBuffer(credential.id),
+            })
+          );
+        options.publicKey.userVerification = "preferred";
+        return navigator.credentials.get({
+          publicKey: options.publicKey,
+        });
+      }
+
+      function authenticationFinish(assertion) {
+        const email = document.getElementById("email").value;
+        if (email === "") {
+          alert("Please enter a email");
+          return;
+        }
+        const url = "/login/result/" + email;
+
+        console.log("assertion:", assertion);
+
+        return fetch(url, {
+          method: "POST",
+          body: JSON.stringify({
+            id: assertion.id,
+            rawId: arrayBufferToBase64(assertion.rawId),
+            type: assertion.type,
+            response: {
+              authenticatorData: arrayBufferToBase64(
+                assertion.response.authenticatorData
+              ),
+              clientDataJSON: arrayBufferToBase64(
+                assertion.response.clientDataJSON
+              ),
+              signature: arrayBufferToBase64(assertion.response.signature),
+              userHandle: arrayBufferToBase64(assertion.response.userHandle),
+            },
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      function signedIn(response) {
+        console.log("signedIn response: ", response);
+        if (response.ok) {
+          alert("ログインしました");
+        } else {
+          alert(response);
+        }
+      }
+
+      /*----------------------------------------------------
+       * Util
+       *--------------------------------------------------*/
+
+      // String to ArrayBuffer
+      function stringToArrayBuffer(string) {
+        // return new TextEncoder().encode(string);
+        return Uint8Array.from(atob(string), (c) => c.charCodeAt(0));
+      }
+
+      // ArrayBufferをBase64文字列にエンコード
+      function arrayBufferToBase64(arrayBuffer) {
+        return btoa(
+          String.fromCharCode.apply(null, new Uint8Array(arrayBuffer))
+        )
+          .replace(/\+/g, "-")
+          .replace(/\//g, "_")
+          .replace(/=/g, "");
+      }
+    </script>
+  </body>
+</html>
