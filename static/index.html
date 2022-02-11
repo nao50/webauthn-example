@@ -32,11 +32,10 @@
         try {
           const optionsRes = await postAttestationOptions();
           const optionsJSON = await optionsRes.json();
-          // console.log("optionsJSON: ", optionsJSON);
+          console.log("PublicKeyCredentialCreationOptions::: ", optionsJSON);
           const credential = await createCredential(optionsJSON);
           // console.log("credential: ", credential);
           const response = await registerResult(credential);
-          // console.log("Registration response: ", response);
           if (response.ok) {
             alert("Registration OK!");
           }
@@ -75,6 +74,9 @@
           );
         }
         options.publicKey.authenticatorSelection.userVerification = "preferred";
+
+        console.log("CredentialCreationOptions::: ", options.publicKey);
+
         return navigator.credentials.create({
           publicKey: options.publicKey,
         });
@@ -92,17 +94,21 @@
         let clientDataJSON = credential.response.clientDataJSON;
         let rawId = credential.rawId;
 
+        let data = {
+          id: credential.id,
+          rawId: arrayBufferToBase64(rawId),
+          type: credential.type,
+          response: {
+            attestationObject: arrayBufferToBase64(attestationObject),
+            clientDataJSON: arrayBufferToBase64(clientDataJSON),
+          },
+        };
+
+        console.log("AuthenticatorAttestationResponse::: ", data);
+
         return fetch(url, {
           method: "POST",
-          body: JSON.stringify({
-            id: credential.id,
-            rawId: arrayBufferToBase64(rawId),
-            type: credential.type,
-            response: {
-              attestationObject: arrayBufferToBase64(attestationObject),
-              clientDataJSON: arrayBufferToBase64(clientDataJSON),
-            },
-          }),
+          body: JSON.stringify(data),
           headers: {
             "Content-Type": "application/json",
           },
@@ -196,7 +202,6 @@
       }
 
       function signedIn(response) {
-        console.log("signedIn response: ", response);
         if (response.ok) {
           alert("ログインしました");
         } else {

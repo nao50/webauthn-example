@@ -156,17 +156,23 @@ func ResultLogin(w http.ResponseWriter, r *http.Request) {
 	// in an actual implementation, we should perform additional checks on
 	// the returned 'credential', i.e. check 'credential.Authenticator.CloneWarning'
 	// and then increment the credentials counter
-	credential, err := webAuthn.FinishLogin(user, sessionData, r)
+	_, err = webAuthn.FinishLogin(user, sessionData, r)
 	if err != nil {
 		log.Println("ResultLogin FinishLogin Fail: ", err)
 		jsonResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	log.Printf("credential: %+v\n", credential)
+	// log.Printf("credential: %+v\n", credential)
+	type U struct {
+		ID          uint64 `json:"id"`
+		Name        string `json:"name"`
+		DisplayName string `json:"displayname"`
+	}
+	var u = U{ID: user.id, Name: user.name, DisplayName: user.displayName}
 
 	// handle successful login
-	jsonResponse(w, "Login Success", http.StatusOK)
+	jsonResponse(w, u, http.StatusOK)
 }
 
 func jsonResponse(w http.ResponseWriter, d interface{}, c int) {
