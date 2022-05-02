@@ -60,6 +60,10 @@
       }
 
       function createCredential(options) {
+        console.log("OOOOOOOOOOOOO::: ", options);
+        // options.publicKey.challenge = stringToArrayBuffer("this is challenge");
+        // options.publicKey.user.id = stringToArrayBuffer("localhost");
+
         options.publicKey.challenge = stringToArrayBuffer(
           options.publicKey.challenge
         );
@@ -89,6 +93,8 @@
           return;
         }
         const url = "/register/result/" + email;
+
+        console.log("AttestationObject::: ", credential);
 
         let attestationObject = credential.response.attestationObject;
         let clientDataJSON = credential.response.clientDataJSON;
@@ -227,6 +233,7 @@
           .replace(/\+/g, "-")
           .replace(/\//g, "_")
           .replace(/=/g, "");
+        // return btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
       }
     </script>
   </body>

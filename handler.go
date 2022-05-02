@@ -20,6 +20,7 @@ func BeginRegistration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// userDB で検索できなければ登録する
 	user, err := userDB.GetUser(username)
 	if err != nil {
 		displayName := strings.Split(username, "@")[0]
@@ -77,6 +78,17 @@ func ResultRegistration(w http.ResponseWriter, r *http.Request) {
 		jsonResponse(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// length, _ := strconv.Atoi(r.Header.Get("Content-Length"))
+	// log.Println("length", length)
+	// body := make([]byte, length)
+	// length, _ = r.Body.Read(body)
+	// var jsonBody map[string]interface{}
+	// err = json.Unmarshal(body[:length], &jsonBody)
+	// if err != nil {
+	// 	log.Println("err", err)
+	// }
+	// fmt.Printf("%+v\n", jsonBody)
 
 	// parsedResponse, _ := protocol.ParseCredentialCreationResponse(r)
 
